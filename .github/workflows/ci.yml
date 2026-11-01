@@ -72,7 +72,15 @@ jobs:
   # contributor runs locally.
   test-release:
     name: test-release (${{ matrix.recipe == 'test-release' && 'hermetic gate' || 'hermetic gate, configured env' }})
-    runs-on: ubuntu-latest
+    # FORK-ONLY (recoverable upstream): pinned off ubuntu-latest because the
+    # 2026-10-19 migration to Ubuntu 26 (actions/runner-images#14748) broke the
+    # container-engine path on fresh fork runners — both legs died inside ~2
+    # minutes of `just test-release`, before the suite could run, while every
+    # non-container leg passed on the same hosts. This is the podman/crun
+    # runner-image regression class the runner script already documents; the
+    # goreleaser job pins ubuntu-22.04 for the same reason. Un-pinning is an
+    # option once ubuntu-latest's container tooling is confirmed working.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
