@@ -141,73 +141,14 @@ nfpms:
     file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ .ConventionalExtension }}"
 
 # --------------------------------------------------------------------------
-# Homebrew — ENABLED (since v0.1.0). goreleaser's `brews` (formula) stanza is
-# deprecated; we publish a *cask* of the prebuilt binary instead. On every
-# tagged release it pushes Casks/agentsync.rb to the spxrogers/homebrew-tap
-# repo, so `brew tap spxrogers/tap && brew install agentsync` works on macOS.
-# The default Actions GITHUB_TOKEN can't write a *different* repo, so the
-# release workflow supplies HOMEBREW_TAP_GITHUB_TOKEN (a token with
-# contents:write on the tap). The post-install hook strips the macOS quarantine
-# xattr Gatekeeper would otherwise put on the unsigned binary.
+# FORK-ONLY: the upstream Homebrew-cask and Scoop publishers are removed.
+# Both push to spxrogers-owned companion repos (homebrew-tap, scoop-bucket)
+# that this fork cannot write, and the release workflow treats a missing
+# bucket/tap token as a failed release, so keeping them would break every
+# fork publish. This fork distributes binaries only through its own GitHub
+# Release assets. The upstream blocks are preserved verbatim in
+# spxrogers/agentsync@v0.17.0 .goreleaser.yaml for reference.
 # --------------------------------------------------------------------------
-
-homebrew_casks:
-  - name: agentsync
-    binaries: [agentsync]
-    repository:
-      owner: spxrogers
-      name: homebrew-tap
-      branch: main
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Casks
-    homepage: https://github.com/spxrogers/agentsync
-    description: Centrally manage AI coding-agent configurations
-    license: MIT
-    url:
-      verified: "github.com/spxrogers/agentsync/"
-    commit_author:
-      name: goreleaser-bot
-      email: goreleaser@users.noreply.github.com
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/agentsync"]
-          end
-
-# --------------------------------------------------------------------------
-# Windows — Scoop (issue #74). Writes bucket/agentsync.json into
-# spxrogers/scoop-bucket on every tagged release, pointing at the Windows .zip
-# already built above, so `scoop install agentsync` works. Runs from the Linux
-# release job — pure Go + git, no Windows tooling. The default Actions
-# GITHUB_TOKEN can't write a *second* repo, so the workflow supplies
-# SCOOP_BUCKET_GITHUB_TOKEN (contents:write on the bucket) — same constraint as
-# the Homebrew tap.
-#
-# The push token comes from SCOOP_BUCKET_GITHUB_TOKEN (a repo secret), templated
-# as plain `{{ .Env.… }}` exactly like the Homebrew cask's token. NOTE: credential
-# fields (repository.token, private_key) render via goreleaser's env-only context
-# (ApplySingleEnvOnly) — only bare `{{ .Env.X }}` works; envOrDefault/isEnvSet are
-# NOT available and fail the release at publish time (`function "envOrDefault" not
-# defined`). They ARE available in full-context fields like the chocolatey api_key.
-# CI guards this (see ci.yml "Guard goreleaser token…").
-# --------------------------------------------------------------------------
-scoops:
-  - name: agentsync
-    repository:
-      owner: spxrogers
-      name: scoop-bucket
-      branch: main
-      token: "{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}"
-    directory: bucket
-    url_template: "https://github.com/spxrogers/agentsync/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    commit_author:
-      name: goreleaser-bot
-      email: goreleaser@users.noreply.github.com
-    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
-    homepage: https://github.com/spxrogers/agentsync
-    description: Centrally manage AI coding-agent configurations.
-    license: MIT
 
 # --------------------------------------------------------------------------
 # Windows — Chocolatey (issue #75). Builds the .nupkg and `choco push`es it so
